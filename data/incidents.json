@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "type": "ACCIDENT",
+    "location": "Silk Board Junction",
+    "lat": 12.9175,
+    "lng": 77.6229,
+    "severity": "HIGH",
+    "emergency": true,
+    "accessible": false,
+    "image": "silk_board_accident.jpg",
+    "timestamp": "2024-01-15T08:30:00"
+  },
+  {
+    "id": 2,
+    "type": "FLOOD",
+    "location": "ORR Underpass",
+    "lat": 12.9352,
+    "lng": 77.6861,
+    "severity": "HIGH",
+    "emergency": false,
+    "accessible": false,
+    "image": "orr_flood.jpg",
+    "timestamp": "2024-01-15T08:15:00"
+  },
+  {
+    "id": 3,
+    "type": "BLOCKED",
+    "location": "Koramangala 5th Block",
+    "lat": 12.9279,
+    "lng": 77.6271,
+    "severity": "MEDIUM",
+    "emergency": false,
+    "accessible": false,
+    "image": "koramangala_blocked.jpg",
+    "timestamp": "2024-01-15T07:45:00"
+  },
+  {
+    "id": 4,
+    "type": "CONGESTION",
+    "location": "Whitefield Main Road",
+    "lat": 12.9698,
+    "lng": 77.7499,
+    "severity": "MEDIUM",
+    "emergency": false,
+    "accessible": true,
+    "image": "whitefield_congestion.jpg",
+    "timestamp": "2024-01-15T09:00:00"
+  },
+  {
+    "id": 5,
+    "type": "CLEAR",
+    "location": "MG Road",
+    "lat": 12.9757,
+    "lng": 77.6011,
+    "severity": "NONE",
+    "emergency": false,
+    "accessible": true,
+    "image": "clear_road.jpg",
+    "timestamp": "2024-01-15T09:15:00"
+  }
+]

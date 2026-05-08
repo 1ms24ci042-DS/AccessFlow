@@ -1,0 +1,10 @@
+{
+  "silk_board":    {"lat": 12.9175, "lng": 77.6229},
+  "whitefield":    {"lat": 12.9698, "lng": 77.7499},
+  "ecity":         {"lat": 12.8399, "lng": 77.6770},
+  "majestic":      {"lat": 12.9767, "lng": 77.5713},
+  "hebbal":        {"lat": 13.0450, "lng": 77.5970},
+  "koramangala":   {"lat": 12.9279, "lng": 77.6271},
+  "mg_road":       {"lat": 12.9757, "lng": 77.6011},
+  "orr":           {"lat": 12.9352, "lng": 77.6861}
+}
