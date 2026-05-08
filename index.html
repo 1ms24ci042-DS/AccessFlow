@@ -1,13 +1,205 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AccessFlow — AI-powered real-time accessibility navigator for Bengaluru. Safe routing for differently-abled citizens.">
+  <title>AccessFlow — Bengaluru Safety Navigator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
 
+  <!-- FULL-SCREEN MAP -->
+  <div id="map-container"></div>
+
+  <!-- TOP BAR -->
+  <div id="top-bar">
+    <div id="logo-pill">
+      <div class="icon">⚡</div>
+      <h1>AccessFlow</h1>
+    </div>
+    <div id="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Search Bengaluru locations..." aria-label="Search locations">
+    </div>
+    <button class="toggle-pill" id="a11y-toggle" aria-label="Toggle accessibility mode">♿ A11Y</button>
+  </div>
+
+  <!-- LEFT FLOATING PANELS -->
+  <div id="left-panel">
+
+    <!-- Camera / Upload Card -->
+    <div class="glass-card" id="camera-card">
+      <div class="card-header">
+        <span class="label">Live Camera Feed</span>
+        <span class="badge b-clear" id="cam-status-badge" style="font-size:9px;">MONITORING</span>
+      </div>
+      <div id="feed-area">
+        <img id="img-a" src="" alt="CCTV camera feed">
+        <img id="img-b" src="" alt="CCTV camera feed" class="out">
+        <div id="live-dot-wrap" class="overlay"><span class="red-dot"></span> LIVE</div>
+        <div id="cam-ts" class="overlay">--:--:--</div>
+        <div id="cam-loc" class="overlay">Loading...</div>
+      </div>
+      <div id="upload-strip">
+        <label for="upload-img">📷 Upload Image</label>
+        <input type="file" id="upload-img" accept="image/*">
+        <label for="upload-vid">🎥 Upload Video</label>
+        <input type="file" id="upload-vid" accept="video/*">
+        <button id="analyze-btn">⚡ Analyze</button>
+      </div>
+    </div>
+
+    <!-- AI Analysis Card -->
+    <div class="glass-card" id="ai-card">
+      <div class="card-header">
+        <span class="label">AI Analysis</span>
+        <span class="badge b-clear" id="ai-type-badge">CLEAR</span>
+      </div>
+      <div class="card-body">
+        <div id="ai-scanning"><div class="spinner"></div> Scanning frame...</div>
+        <div id="ai-result">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <span class="sev sev-low" id="ai-sev">LOW</span>
+            <span id="ai-emg" style="display:none;font-size:11px;font-weight:800;color:var(--danger);">🚨 EMERGENCY</span>
+          </div>
+          <p id="ai-desc">Awaiting analysis...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Route Planner Card -->
+    <div class="glass-card" id="route-card">
+      <div class="card-header">
+        <span class="label">Route Planner</span>
+        <span style="font-size:11px;color:var(--text-secondary);">🗺️ Bengaluru</span>
+      </div>
+      <div class="card-body">
+        <div class="route-row">
+          <div class="dot g"></div>
+          <select id="route-start" aria-label="Start location">
+            <option value="">Select start...</option>
+            <option value="12.9698,77.7499">Whitefield</option>
+            <option value="12.9767,77.5713">Majestic</option>
+            <option value="12.9757,77.6011">MG Road</option>
+            <option value="13.0450,77.5970">Hebbal</option>
+            <option value="12.9352,77.6245">Jayanagar</option>
+            <option value="12.9592,77.6974">Indiranagar</option>
+            <option value="12.8399,77.6770">Electronic City</option>
+          </select>
+        </div>
+        <div class="route-row">
+          <div class="dot r"></div>
+          <select id="route-end" aria-label="End location">
+            <option value="">Select destination...</option>
+            <option value="12.9279,77.6271">Koramangala</option>
+            <option value="12.9175,77.6229">Silk Board</option>
+            <option value="12.9352,77.6861">ORR / Marathahalli</option>
+            <option value="12.9767,77.5713">Majestic</option>
+            <option value="12.8399,77.6770">Electronic City</option>
+            <option value="13.0450,77.5970">Hebbal</option>
+            <option value="12.9121,77.6446">HSR Layout</option>
+          </select>
+        </div>
+        <div class="route-actions">
+          <button id="wheelchair-btn">♿ Accessible</button>
+          <button id="go-btn">Find Safe Route →</button>
+        </div>
+        <div id="route-results">
+          <div class="route-opt" data-rt="fastest" id="opt-fastest">
+            <div class="route-opt-head">
+              <span class="route-opt-name">🚗 Fastest Route</span>
+              <span class="route-opt-score" id="fast-score">—</span>
+            </div>
+            <div class="route-meta">
+              <span>🕐 <span id="fast-time">--</span> min</span>
+              <span>📏 <span id="fast-dist">--</span> km</span>
+              <span id="fast-a11y">♿</span>
+            </div>
+            <div class="conf-track"><div class="conf-fill" id="fast-bar"></div></div>
+          </div>
+          <div class="route-opt picked" data-rt="accessible" id="opt-accessible">
+            <div class="route-opt-head">
+              <span class="route-opt-name">♿ Accessible Route</span>
+              <span class="route-opt-score" id="acc-score">—</span>
+            </div>
+            <div class="route-meta">
+              <span>🕐 <span id="acc-time">--</span> min</span>
+              <span>📏 <span id="acc-dist">--</span> km</span>
+              <span id="acc-a11y" style="color:var(--safe);">♿ ✓</span>
+            </div>
+            <div class="conf-track"><div class="conf-fill" id="acc-bar"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDE BADGES -->
+  <div id="map-badges">
+    <div class="float-badge"><span class="live-d"></span> Live • <span id="countdown">10</span>s</div>
+    <div id="legend-card">
+      <h4>Incident Types</h4>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--danger)"></div> Accident</div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--flood)"></div> Flood</div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--blocked)"></div> Blocked</div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--amber)"></div> Congestion</div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--safe)"></div> Clear</div>
+    </div>
+  </div>
+
+  <!-- A11Y MAP BADGE -->
+  <div id="a11y-map-badge">♿ Accessible View Active</div>
+
+</div>
+
+<!-- BOTTOM BAR (outside #app so Leaflet doesn't capture events) -->
+<div id="bottom-bar">
+  <button class="bottom-btn danger" id="btn-108">🚑 Emergency 108</button>
+  <button class="bottom-btn warn" id="btn-bbmp">📋 BBMP Complaint</button>
+  <button class="bottom-btn" id="btn-voice" title="Voice navigation (coming soon)">🔊 Voice Nav</button>
+  <button class="bottom-btn" id="btn-braille" title="Braille display (coming soon)">⠿ Braille</button>
+</div>
+
+<!-- A11Y BANNER -->
+<div id="a11y-banner">♿ Accessibility Mode — Showing wheelchair-safe routes only</div>
+
+<!-- EMERGENCY MODAL -->
+<div class="modal-bg" id="alert-modal">
+  <div class="modal-box">
+    <button class="modal-x" id="alert-close">✕</button>
+    <h2 class="modal-title">🚨 Emergency Alert — 108 Ambulance</h2>
+    <textarea class="modal-ta" id="alert-ta" rows="6"></textarea>
+    <div class="modal-btns">
+      <button class="mbtn secondary" id="alert-copy">📋 Copy Alert</button>
+      <button class="mbtn primary" id="alert-send">🚑 Send to 108</button>
+    </div>
+  </div>
+</div>
+
+<!-- BBMP MODAL -->
+<div class="modal-bg" id="bbmp-modal">
+  <div class="modal-box">
+    <button class="modal-x" id="bbmp-close">✕</button>
+    <h2 class="modal-title">📋 BBMP Infrastructure Complaint</h2>
+    <textarea class="modal-ta" id="bbmp-ta" rows="8"></textarea>
+    <div class="modal-btns">
+      <button class="mbtn secondary" id="bbmp-copy">📋 Copy Complaint</button>
+      <button class="mbtn primary safe" id="bbmp-send">📨 Submit to BBMP</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="map.js"></script>
+<script src="camera.js"></script>
+</body>
+</html>
