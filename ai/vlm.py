@@ -526,4 +526,3 @@ if __name__ == "__main__":
         print(f"  {Path(r['file']).name:30s} -> "
               f"{r['type']:12s} [{status}] [{access}]")
     print("=" * 60)
-
