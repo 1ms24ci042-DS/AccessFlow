@@ -1,0 +1,13 @@
+{
+  "name": "AccessFlow - Smart Bengaluru Access",
+  "description": "AI-powered accessibility and commute platform for Bengaluru. Uses VLM for real-time hazard detection and wheelchair-safe routing.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "Real-time Mapping",
+    "AI Vision Integration",
+    "Accessibility Routing"
+  ]
+}
