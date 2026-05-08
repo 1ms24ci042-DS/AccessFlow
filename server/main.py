@@ -22,7 +22,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from ai.vlm import analyze_image  # noqa: E402
-from server.routing import plan_route  # noqa: E402
+from ai.routing_agent import plan_route  # noqa: E402
 from server.alerts import generate_emergency_alert, generate_bbmp_complaint  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -80,6 +80,7 @@ class RouteRequest(BaseModel):
     start_lng: float
     end_lat: float
     end_lng: float
+    user_type: str = "default"
 
 
 class AlertRequest(BaseModel):
@@ -160,11 +161,12 @@ async def route_endpoint(request: RouteRequest):
     """
     Plan an accessible route between two points.
     """
+    incidents = _load_incidents()
     result = plan_route(
-        request.start_lat,
-        request.start_lng,
-        request.end_lat,
-        request.end_lng,
+        start=[request.start_lat, request.start_lng],
+        end=[request.end_lat, request.end_lng],
+        user_type=request.user_type,
+        incidents=incidents,
     )
     return result
 

@@ -223,12 +223,12 @@ def _deterministic_score(
             has_accessibility_issue = True
 
     # Accessibility-specific adjustments
-    if user_type in ("wheelchair", "mobility_aid", "visually_impaired"):
+    if user_type == "disabled":
         if has_accessibility_issue:
             score += _ACCESSIBILITY_PENALTY
             reasons.append(
                 f"This route has sections that are not safely passable "
-                f"for a {user_type.replace('_', ' ')} user."
+                f"for a disabled user."
             )
         elif not nearby:
             score += _ACCESSIBILITY_BONUS
@@ -421,7 +421,7 @@ def score_routes(
     Args:
         routes:     List of route dicts from get_osrm_routes().
         incidents:  List of incident dicts from the VLM pipeline.
-        user_type:  "wheelchair", "visually_impaired", "mobility_aid", or "general".
+        user_type:  "disabled" or "default".
 
     Returns:
         List of scored route dicts (one per input route), each with:
@@ -646,7 +646,7 @@ if __name__ == "__main__":
     start_coord = [12.9175, 77.6229]   # Silk Board Junction
     end_coord = [12.9716, 77.5946]     # Majestic / KSR Station
 
-    user = "wheelchair"
+    user = "disabled"
 
     # Simulated incidents (normally these come from VLM)
     test_incidents = [
