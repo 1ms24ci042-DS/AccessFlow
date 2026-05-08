@@ -17,7 +17,9 @@ import {
   Zap,
   AlertTriangle,
   X,
-  ShieldCheck
+  ShieldCheck,
+  Sun,
+  Moon
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -30,7 +32,37 @@ const DEMO_FRAMES = [
 ];
 
 export default function App() {
-  const [situations, setSituations] = useState<LocationData[]>([]);
+  const [situations, setSituations] = useState<LocationData[]>([
+    {
+      id: "pin-1",
+      name: "Waterlogging",
+      coordinates: LOCATIONS.koramangala,
+      type: "flood",
+      severity: "high",
+      description: "Severe waterlogging due to heavy rains.",
+      timestamp: new Date().toLocaleTimeString()
+    },
+    {
+      id: "pin-2",
+      name: "Accident",
+      coordinates: LOCATIONS.silk_board,
+      type: "accident",
+      severity: "medium",
+      description: "2-vehicle collision blocking left lane.",
+      timestamp: new Date().toLocaleTimeString()
+    },
+    {
+      id: "pin-3",
+      name: "Roadwork",
+      coordinates: LOCATIONS.mg_road,
+      type: "blocked",
+      severity: "medium",
+      description: "Metro construction work.",
+      timestamp: new Date().toLocaleTimeString()
+    }
+  ]);
+  const [isLightMode, setIsLightMode] = useState(true);
+  const [showTraffic, setShowTraffic] = useState(false);
   const [isAccessibilityMode, setIsAccessibilityMode] = useState(false);
   const [activeFrameIndex, setActiveFrameIndex] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -41,14 +73,23 @@ export default function App() {
   const [isRerouted, setIsRerouted] = useState(false);
   const [isApplyingRoute, setIsApplyingRoute] = useState(false);
   const [severityFilter, setSeverityFilter] = useState<string[]>(['low', 'medium', 'high']);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const [sourceInput, setSourceInput] = useState("Silk Board Junction");
+  const [destInput, setDestInput] = useState("Hebbal Flyover");
+  
+  // Use pre-defined coordinates or let nominatim fetch
+  const [sourceCoords, setSourceCoords] = useState<[number, number]>(LOCATIONS.silk_board);
+  const [destCoords, setDestCoords] = useState<[number, number]>(LOCATIONS.hebbal);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const widgetThemeClass = !isAccessibilityMode ? 'invert hue-rotate-180 transition-[filter] duration-700' : 'transition-[filter] duration-700';
 
   useEffect(() => {
 
     // Initial analysis
     triggerAnalysis();
   }, []);
-
-  const [notification, setNotification] = useState<string | null>(null);
 
   const toggleSeverity = (severity: string) => {
     setSeverityFilter(prev => 
@@ -166,6 +207,51 @@ export default function App() {
     }
   };
 
+  const handleRouteSearch = async () => {
+    setIsSearching(true);
+    setNotification("Geocoding addresses...");
+    
+    try {
+      // Small helper to fetch via nominatim
+      const fetchCoords = async (query: string): Promise<[number, number] | null> => {
+        // First check mock LOCATIONS keys
+        const qLower = query.toLowerCase();
+        for (const key in LOCATIONS) {
+           if (qLower.includes(key.replace('_', ' '))) {
+              return LOCATIONS[key];
+           }
+        }
+        
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Bangalore')}`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        }
+        return null; // Not found
+      };
+
+      const [src, dst] = await Promise.all([
+        fetchCoords(sourceInput),
+        fetchCoords(destInput)
+      ]);
+
+      if (src) setSourceCoords(src);
+      if (dst) setDestCoords(dst);
+      
+      if (!src || !dst) {
+         setNotification("Could not find exact location, using approximations.");
+      } else {
+         setNotification("Route generated based on real-time data.");
+         setIsRerouted(true);
+      }
+      
+    } catch (e) {
+      setNotification("Search failed. Falling back to default routing.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   return (
     <div className="w-screen h-screen flex bg-slate-950 font-sans selection:bg-cyan-500/30">
       {/* Dynamic Background Noise */}
@@ -174,7 +260,7 @@ export default function App() {
       {/* Main UI Substrate */}
       <div className="relative flex-1 flex flex-col">
         {/* Top Navigation */}
-        <header className="h-16 flex items-center justify-between px-6 z-50 absolute top-0 left-0 right-0">
+        <header className={`h-16 flex items-center justify-between px-6 z-50 absolute top-0 left-0 right-0 ${widgetThemeClass}`}>
           <div className="flex items-center gap-3">
              <div className="relative pointer-events-auto group">
               <div className="w-10 h-10 bg-cyan-600 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(8,145,178,0.4)] transition-transform group-hover:rotate-12">
@@ -197,11 +283,17 @@ export default function App() {
 
           <div className="flex items-center gap-4">
             <div className="flex bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-full p-1 shadow-lg pointer-events-auto">
-              <button className="px-4 py-1.5 rounded-full bg-slate-800 text-xs font-bold flex items-center gap-2 active-click">
+              <button 
+                onClick={() => setShowTraffic(false)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 active-click ${!showTraffic ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+              >
                 <MapIcon size={14} /> Map
               </button>
-              <button className="px-4 py-1.5 rounded-full text-slate-500 text-xs font-bold flex items-center gap-2 hover:text-slate-300 active-click">
-                <Layers size={14} /> SAT
+              <button 
+                onClick={() => setShowTraffic(true)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 active-click ${showTraffic ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                <Layers size={14} /> Traffic
               </button>
             </div>
             <div className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer pointer-events-auto active-click">
@@ -212,25 +304,34 @@ export default function App() {
 
         {/* Central Map Workspace */}
         <main className="flex-1 relative">
-          <MapView 
-            situations={filteredSituations} 
-            accessibilityMode={isAccessibilityMode} 
-            onMarkerClick={(sit) => console.log(sit)}
-          />
-
-          {/* Left Panel: VLM Insight */}
-          <div className="absolute left-6 top-24 bottom-6 z-[1200] flex flex-col gap-4">
-             <CameraPanel 
-                currentFrame={DEMO_FRAMES[activeFrameIndex]} 
-                isAnalyzing={isAnalyzing}
-                onRefresh={cycleFrame}
-                onUpload={handleUpload}
-                result={analysisResult}
+          <div id="map" className="absolute inset-0 z-0">
+             <MapView 
+               situations={filteredSituations} 
+               accessibilityMode={isAccessibilityMode} 
+               isLightMode={isLightMode}
+               showTraffic={showTraffic}
+               onMarkerClick={(sit) => console.log(sit)}
+               sourceCoords={sourceCoords}
+               destCoords={destCoords}
              />
           </div>
 
+          {/* Left Panel: VLM Insight */}
+          <div id="surveillance-panel" className={`absolute -left-2 top-16 bottom-0 z-[1200] flex flex-col gap-4 pointer-events-none px-8 py-8 ${widgetThemeClass}`}>
+             <div className="pointer-events-auto h-full">
+               <CameraPanel 
+                  currentFrame={DEMO_FRAMES[activeFrameIndex]} 
+                  isAnalyzing={isAnalyzing}
+                  onRefresh={cycleFrame}
+                  onUpload={handleUpload}
+                  result={analysisResult}
+                  isLightMode={!isAccessibilityMode}
+               />
+             </div>
+          </div>
+
           {/* Right Floating Widgets */}
-          <div className="absolute right-6 top-24 bottom-28 z-[1200] flex flex-col gap-4 w-80 pointer-events-none overflow-y-auto pr-2 no-scrollbar">
+          <div className={`absolute -right-2 top-16 bottom-28 z-[1200] flex flex-col gap-4 w-[400px] px-10 pt-8 pb-24 pointer-events-none overflow-y-auto no-scrollbar ${widgetThemeClass}`}>
             
             {/* Route Precision Card */}
             <motion.div 
@@ -262,8 +363,10 @@ export default function App() {
                        <div className="flex-1">
                          <div className="text-[9px] text-slate-500 font-bold uppercase mb-1">Source</div>
                          <input 
+                           id="start-address"
                            type="text" 
-                           defaultValue="Silk Board Junction"
+                           value={sourceInput}
+                           onChange={(e) => setSourceInput(e.target.value)}
                            className="w-full bg-slate-900/50 rounded-lg border border-slate-800 p-2 text-xs font-bold text-white focus:outline-none focus:border-cyan-500 transition-colors"
                          />
                        </div>
@@ -273,8 +376,10 @@ export default function App() {
                        <div className="flex-1">
                          <div className="text-[9px] text-slate-500 font-bold uppercase mb-1">Destination</div>
                          <input 
+                           id="end-address"
                            type="text" 
-                           defaultValue="Hebbal Flyover"
+                           value={destInput}
+                           onChange={(e) => setDestInput(e.target.value)}
                            className="w-full bg-slate-900/50 rounded-lg border border-slate-800 p-2 text-xs font-bold text-white focus:outline-none focus:border-pink-500 transition-colors"
                          />
                        </div>
@@ -282,13 +387,13 @@ export default function App() {
                    </div>
                  </div>
                  <button 
-                   onClick={() => {
-                      setIsRerouted(true);
-                      setNotification("Rerouting based on live VLM data...");
-                    }}
-                   className="w-full py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 active-click shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-white/20"
+                   id="search-route-btn"
+                   disabled={isSearching}
+                   onClick={() => handleRouteSearch()}
+                   className="w-full py-2 bg-gradient-to-r flex-shrink-0 from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 active-click shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-white/20 disabled:opacity-50"
                  >
-                   <Search size={14} /> Search Best Route
+                   {isSearching ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Search size={14} />} 
+                   {isSearching ? 'Searching...' : 'Search Best Route'}
                  </button>
               </div>
             </motion.div>
@@ -310,11 +415,11 @@ export default function App() {
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <div className="p-2 bg-slate-950/50 rounded-lg border border-slate-800">
                   <div className="text-[8px] text-slate-500 font-bold uppercase">Travel Time</div>
-                  <div className="text-xs font-bold text-white transition-all duration-500">{activeRoute.time}</div>
+                  <div id="travel-time" className="text-xs font-bold text-white transition-all duration-500">{activeRoute.time}</div>
                 </div>
                 <div className="p-2 bg-slate-950/50 rounded-lg border border-slate-800">
                   <div className="text-[8px] text-slate-500 font-bold uppercase">Distance</div>
-                  <div className="text-xs font-bold text-white transition-all duration-500">{activeRoute.dist}</div>
+                  <div id="distance" className="text-xs font-bold text-white transition-all duration-500">{activeRoute.dist}</div>
                 </div>
               </div>
 
@@ -392,7 +497,21 @@ export default function App() {
             </AnimatePresence>
 
             {/* Accessibility Mode Toggle */}
+            <label 
+              htmlFor="accessibility-toggle-checkbox"
+              className="sr-only"
+            >Toggle Wheelchair Mode</label>
+            <input 
+              id="accessibility-toggle-checkbox"
+              type="checkbox"
+              className="hidden access-toggle"
+              checked={isAccessibilityMode}
+              onChange={(e) => {
+                 if (e.target.checked !== isAccessibilityMode) toggleAccessibility();
+              }}
+            />
             <motion.button 
+              id="accessibility-toggle"
               onClick={toggleAccessibility}
               className={`p-4 pointer-events-auto flex items-center justify-between transition-all cursor-pointer shrink-0 active-click ${
                 isAccessibilityMode ? 'glass-card-cyan ring-2 ring-cyan-500' : 'glass-card'
@@ -411,6 +530,32 @@ export default function App() {
               </div>
               <div className={`w-10 h-6 rounded-full p-1 flex items-center transition-colors ${
                 isAccessibilityMode ? 'bg-cyan-500/30 justify-end' : 'bg-slate-800 justify-start'
+              }`}>
+                <motion.div layout className="w-4 h-4 bg-white rounded-full shadow-md" />
+              </div>
+            </motion.button>
+
+            {/* Map Theme Toggle */}
+            <motion.button 
+              id="theme-toggle"
+              onClick={() => setIsLightMode(!isLightMode)}
+              className={`p-4 pointer-events-auto flex items-center justify-between transition-all cursor-pointer shrink-0 active-click ${
+                isLightMode ? 'glass-card-amber ring-2 ring-amber-500' : 'glass-card'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                  isLightMode ? 'bg-amber-500 text-slate-900 shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'bg-slate-800 text-amber-500'
+                }`}>
+                  {isLightMode ? <Sun size={20} /> : <Moon size={20} />}
+                </div>
+                <div className="text-left">
+                  <h3 className="text-xs font-bold uppercase tracking-tight">Map Theme</h3>
+                  <p className="text-[9px] text-slate-500 font-bold uppercase">Toggle Map Base Tile</p>
+                </div>
+              </div>
+              <div className={`w-10 h-6 rounded-full p-1 flex items-center transition-colors ${
+                isLightMode ? 'bg-amber-500/30 justify-end' : 'bg-slate-800 justify-start'
               }`}>
                 <motion.div layout className="w-4 h-4 bg-white rounded-full shadow-md" />
               </div>
@@ -477,16 +622,16 @@ export default function App() {
             )}
 
             {!tickerDismissed && filteredSituations.length > 0 && (
-              <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1100] w-full max-w-3xl px-6 pointer-events-none">
+              <div id="emergency-banner" className={`absolute top-20 left-1/2 -translate-x-1/2 z-[1100] w-full max-w-3xl px-6 pointer-events-none ${widgetThemeClass}`}>
                 <motion.div 
                    initial={{ y: -50, opacity: 0 }}
                    animate={{ y: 0, opacity: 1 }}
                    exit={{ y: -50, opacity: 0 }}
-                   className="glass rounded-2xl h-14 flex items-center overflow-hidden pointer-events-auto border-red-500/30"
+                   className="glass-card-rose h-14 flex items-stretch p-0 overflow-hidden pointer-events-auto"
                 >
                   <div className="px-4 h-full flex items-center bg-red-600 text-white font-black text-[10px] uppercase tracking-widest relative">
                     <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                    <span className="relative">Global Alerts</span>
+                    <span className="relative">Route Alerts</span>
                   </div>
                   <div className="flex-1 px-4 overflow-hidden bg-slate-900/50 flex items-center">
                     <motion.div 
@@ -494,8 +639,8 @@ export default function App() {
                        transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
                        className="whitespace-nowrap flex items-center gap-12 text-[11px] font-bold text-slate-300"
                     >
-                      {filteredSituations.map(sit => (
-                        <span key={sit.id} className={`flex items-center gap-2 ${sit.severity === 'high' ? 'text-red-500' : 'text-amber-400'}`}>
+                      {filteredSituations.map((sit, i) => (
+                        <span key={`${sit.id}-${i}`} className={`flex items-center gap-2 ${sit.severity === 'high' ? 'text-red-500' : 'text-amber-400'}`}>
                           <AlertOctagon size={12} fill="currentColor" /> {sit.name.toUpperCase()}: {sit.description.toString().toUpperCase()}
                         </span>
                       ))}
@@ -520,24 +665,7 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          {/* Floating Severity Filters (Top Left Center-ish) */}
-          <div className="absolute top-2 left-[400px] z-[1200] flex gap-2">
-            {(['high', 'medium', 'low'] as const).map(sev => (
-              <button
-                key={sev}
-                onClick={() => toggleSeverity(sev)}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all glass-card active-click ${
-                  severityFilter.includes(sev)
-                    ? sev === 'high' ? 'bg-red-500/20 text-red-500 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]' 
-                    : sev === 'medium' ? 'bg-amber-500/20 text-amber-500 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)]'
-                    : 'bg-green-500/20 text-green-500 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.3)]'
-                  : 'bg-slate-950/50 text-slate-500 border-slate-800 grayscale'
-                }`}
-              >
-                {sev}
-              </button>
-            ))}
-          </div>
+
 
         </main>
       </div>
@@ -545,7 +673,7 @@ export default function App() {
       {/* Emergency Modal Overlays */}
       <AnimatePresence>
         {showEmergency && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 backdrop-blur-md bg-red-950/20">
+          <div id="modal" className="fixed inset-0 z-[2000] flex items-center justify-center p-6 backdrop-blur-md bg-red-950/20">
             <motion.div 
               initial={{ scale: 0.9, opacity: 0, rotateX: 45 }}
               animate={{ scale: 1, opacity: 1, rotateX: 0 }}
@@ -567,7 +695,7 @@ export default function App() {
                   <AlertOctagon size={32} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black uppercase text-white">Emergency Warning</h2>
+                  <h2 id="modal-title" className="text-2xl font-black uppercase text-white">Emergency Warning</h2>
                   <p className="text-slate-400 text-sm mt-2 font-medium">Critical hazard detected on your planned path. Immediate rerouting recommended for wheelchair users.</p>
                 </div>
               </div>
@@ -589,12 +717,13 @@ export default function App() {
                   Ignore (At Own Risk)
                 </button>
               </div>
+              <textarea id="modal-text" className="hidden" readOnly value="Critical hazard detected on your planned path." />
 
               <div className="flex items-center gap-4 pt-4 border-t border-slate-800">
-                <div className="flex-1 flex items-center gap-2 text-xs font-bold text-slate-500">
+                <div id="bbmp-btn" className="flex-1 flex items-center gap-2 text-xs font-bold text-slate-500 cursor-pointer hover:text-white transition-colors">
                   <HandMetal size={14} /> Send BBMP Complaint
                 </div>
-                <div className="flex-1 flex items-center gap-2 text-xs font-bold text-red-400">
+                <div id="alert-108" className="flex-1 flex items-center gap-2 text-xs font-bold text-red-400 cursor-pointer hover:text-red-300 transition-colors">
                   <Zap size={14} /> Dial 108 Alert
                 </div>
               </div>
@@ -604,7 +733,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Floating Action Menu */}
-      <div className="fixed bottom-6 right-6 z-[1000] flex flex-col gap-3">
+      <div className={`fixed bottom-6 right-6 z-[1000] flex flex-col gap-3 ${widgetThemeClass}`}>
         <motion.button 
           whileHover={{ scale: 1.1, rotate: 90 }}
           className="w-14 h-14 bg-cyan-600 rounded-2xl flex items-center justify-center text-white shadow-2xl hover:bg-cyan-500 transition-colors active-click"

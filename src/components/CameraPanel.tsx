@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { Camera, RefreshCw, Layers, ShieldCheck, Zap, AlertTriangle, Upload, FileVideo } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { LocationData } from '../types';
 
 interface CameraPanelProps {
@@ -9,15 +9,16 @@ interface CameraPanelProps {
   onRefresh: () => void;
   onUpload: (file: File) => void;
   result?: Partial<LocationData>;
+  isLightMode?: boolean;
 }
 
-export default function CameraPanel({ currentFrame, isAnalyzing, onRefresh, onUpload, result }: CameraPanelProps) {
+export default function CameraPanel({ currentFrame, isAnalyzing, onRefresh, onUpload, result, isLightMode }: CameraPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onUpload(file);
+       onUpload(file);
     }
   };
   return (
@@ -35,7 +36,7 @@ export default function CameraPanel({ currentFrame, isAnalyzing, onRefresh, onUp
         damping: 20,
         y: { duration: 5, repeat: Infinity, ease: "easeInOut" }
       }}
-      className="w-80 h-full glass-card-rose overflow-hidden flex flex-col gap-4 shadow-[20px_0_50px_rgba(0,0,0,0.3)]"
+      className="w-80 h-full glass-blue-lit overflow-hidden flex flex-col gap-4 shadow-[20px_0_50px_rgba(0,0,0,0.3)]"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -54,7 +55,7 @@ export default function CameraPanel({ currentFrame, isAnalyzing, onRefresh, onUp
         <img 
           src={currentFrame} 
           alt="Surveillance Feed" 
-          className="w-full h-full object-cover grayscale brightness-75"
+          className={`w-full h-full object-cover grayscale brightness-75 ${isLightMode ? 'invert hue-rotate-180' : ''}`}
         />
         
         {/* Scanning Overlay */}
@@ -104,6 +105,7 @@ export default function CameraPanel({ currentFrame, isAnalyzing, onRefresh, onUp
               />
             </div>
             <motion.span 
+              id="ai-confidence"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="text-xs font-mono text-cyan-400"
