@@ -31,13 +31,13 @@ from PIL import Image
 # Set via:  $env:GEMINI_API_KEY = "your-key"  (PowerShell)
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
-# Which mode to use: "api" or "local"
-# Set via:  $env:VLM_MODE = "local"  (PowerShell)
-# Default: tries API first, falls back to local
-VLM_MODE: str = os.getenv("VLM_MODE", "local")
+# Which mode to use: "nvidia", "api" or "local"
+# Set via:  $env:VLM_MODE = "nvidia"  (PowerShell)
+# Default: tries NVIDIA first, falls back to others
+VLM_MODE: str = os.getenv("VLM_MODE", "nvidia")
 
-# Maximum image dimension (pixels) before resizing
-MAX_IMAGE_DIM: int = 1024
+# Maximum image dimension (pixels) before resizing — keep small for speed
+MAX_IMAGE_DIM: int = 512
 
 # Gemini model (API mode)
 GEMINI_MODEL: str = "gemini-2.0-flash"
@@ -46,56 +46,16 @@ GEMINI_MODEL: str = "gemini-2.0-flash"
 #   "llava"       - 7B params, ~4.5GB VRAM, fastest
 #   "llava:13b"   - 13B params, ~8GB VRAM, better accuracy
 #   "llava:34b"   - 34B params, won't fit 12GB
-OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "gemma4:e4b")
+OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "moondream")
 OLLAMA_URL: str = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
-# Prompt template sent alongside every image
-ANALYSIS_PROMPT: str = """You are an AI traffic analyst for AccessFlow Bengaluru, a system
-that helps differently-abled citizens navigate the city safely.
-
-Analyze the provided traffic/road image and return a JSON object with
-EXACTLY these fields (no extra text, no markdown fences):
-
-{
-  "type": "<one of: ACCIDENT, FLOOD, BLOCKED, CONGESTION, CLEAR>",
-  "severity": "<one of: HIGH, MEDIUM, LOW>",
-  "description": "<1-2 sentence description of what you see>",
-  "emergency": <true if emergency services are needed, else false>,
-  "accessible": <true if a wheelchair user can safely pass, else false>
-}
-
-IMPORTANT: Look at the FOREGROUND of the image first. Classify based on the
-MOST SERIOUS event visible, not the background.
-
-Rules for TYPE (check in this priority order):
-1. ACCIDENT = ANY vehicle collision, crash, overturned vehicle, damaged vehicles,
-   debris/broken parts on road, vehicles at abnormal angles, people gathered
-   around a crash. If you see EVEN ONE collision or crash, type MUST be ACCIDENT
-   regardless of traffic behind it.
-2. FLOOD = waterlogging, submerged road, heavy water accumulation.
-3. BLOCKED = construction barricade, fallen tree, footpath obstruction.
-4. CONGESTION = ONLY heavy traffic with NO accident, NO collision, NO debris.
-   Pure bumper-to-bumper traffic jam with all vehicles intact.
-5. CLEAR = road is open with no issues.
-
-Rules for SEVERITY (be strict):
-- HIGH = road is completely blocked OR bumper-to-bumper gridlock OR
-  vehicles are not moving OR major accident OR deep flooding.
-  When in doubt between MEDIUM and HIGH, choose HIGH.
-- MEDIUM = road is partially blocked, slow-moving traffic, minor obstruction.
-- LOW = minor issue, road mostly usable.
-- If type is CLEAR, severity must be LOW.
-
-Rules for emergency:
-- true only for accidents with visible injury risk or life-threatening flooding.
-
-Rules for accessible:
-- true only if a wheelchair/mobility-aid user can CLEARLY and SAFELY
-  navigate through without ANY obstruction.
-- If there is heavy traffic, congestion, flooding, or blocked paths,
-  accessible must be false.
-
-Return ONLY the JSON object. No explanation, no markdown."""
+# Prompt template — kept concise for speed
+ANALYSIS_PROMPT: str = """Traffic analyst for AccessFlow Bengaluru. Analyze this road image.
+Return ONLY valid JSON (no markdown, no extra text):
+{"type":"ACCIDENT|FLOOD|BLOCKED|CONGESTION|CLEAR","severity":"HIGH|MEDIUM|LOW","description":"<1 sentence>","emergency":true/false,"accessible":true/false}
+Rules: ACCIDENT=collision/crash/debris. FLOOD=waterlogging. BLOCKED=barricade/tree. CONGESTION=heavy traffic only. CLEAR=open road.
+HIGH=fully blocked/major crash/gridlock. MEDIUM=partial block/slow traffic. LOW=minor issue. CLEAR→LOW.
+emergency=true only if injury risk. accessible=true only if wheelchair can safely pass."""
 
 
 # ---------------------------------------------------------------------------
@@ -225,38 +185,45 @@ def analyze_image_gemini(image_path: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def analyze_image_ollama(image_path: str) -> dict:
-    """Analyze using local Ollama LLaVA model on your GPU.
-
-    Requires:
-      1. Install Ollama: https://ollama.com/download
-      2. Pull model:  ollama pull llava
-      3. Ollama runs automatically as a service
-
-    RTX 4070 (12GB VRAM) can run:
-      - llava (7B)   -> ~4.5GB VRAM, fast, good enough for demo
-      - llava:13b    -> ~8GB VRAM, better accuracy
-    """
+    """Analyze using a local Ollama vision model on the GPU."""
     import requests
 
     img = preprocess_image(image_path)
     b64_image = base64.b64encode(_image_to_bytes(img)).decode("utf-8")
 
+    # Use /api/chat — works with all modern Ollama vision models
+    # (moondream, llava, minicpm-v, qwen-vl, etc.)
     payload = {
         "model": OLLAMA_MODEL,
-        "prompt": ANALYSIS_PROMPT,
-        "images": [b64_image],
+        "messages": [
+            {
+                "role": "user",
+                "content": ANALYSIS_PROMPT,
+                "images": [b64_image],
+            }
+        ],
         "stream": False,
+        "keep_alive": -1,
+        "options": {
+            "num_predict": 200,
+            "num_ctx": 2048,
+            "temperature": 0.1,
+        },
     }
 
     try:
         resp = requests.post(
-            f"{OLLAMA_URL}/api/generate",
+            f"{OLLAMA_URL}/api/chat",
             json=payload,
-            timeout=120,  # local models can be slower
+            timeout=180,
         )
         resp.raise_for_status()
-        raw_text = resp.json().get("response", "")
-        print(f"  -> Ollama raw response:\n    {raw_text[:200]}")
+        data = resp.json()
+        # /api/chat returns message.content
+        raw_text = data.get("message", {}).get("content", "") or data.get("response", "")
+        print(f"  -> Ollama raw response:\n    {raw_text[:300]}")
+        if not raw_text.strip():
+            raise RuntimeError("Model returned empty response")
         parsed = _parse_json_response(raw_text)
         return _validate_result(parsed)
     except requests.ConnectionError:
@@ -271,6 +238,55 @@ def analyze_image_ollama(image_path: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# METHOD 3: NVIDIA NIM API (Cloud, High Accuracy)
+# ---------------------------------------------------------------------------
+
+def analyze_image_nvidia(image_path: str) -> dict:
+    """Analyze using NVIDIA NIM API (Llama 3.2 90B Vision)."""
+    import requests
+
+    api_key = os.getenv("NVIDIA_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("NVIDIA_API_KEY not set. Get one free at build.nvidia.com")
+
+    invoke_url = "https://integrate.api.nvidia.com/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json"
+    }
+
+    img = preprocess_image(image_path)
+    b64_image = base64.b64encode(_image_to_bytes(img)).decode("utf-8")
+
+    payload = {
+        "model": "meta/llama-3.2-90b-vision-instruct",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": ANALYSIS_PROMPT},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"}}
+                ]
+            }
+        ],
+        "max_tokens": 512,
+        "temperature": 0.1,
+        "stream": False
+    }
+
+    try:
+        resp = requests.post(invoke_url, headers=headers, json=payload, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        raw_text = data["choices"][0]["message"]["content"]
+        print(f"  -> NVIDIA raw response:\n    {raw_text[:200]}")
+        parsed = _parse_json_response(raw_text)
+        return _validate_result(parsed)
+    except Exception as e:
+        raise RuntimeError(f"NVIDIA API failed: {e}")
+
+
+# ---------------------------------------------------------------------------
 # Public API - this is what P3's server/main.py calls
 # ---------------------------------------------------------------------------
 
@@ -278,9 +294,10 @@ def analyze_image(image_path: str) -> dict:
     """Analyze a traffic/road image and return structured incident data.
 
     Mode selection (VLM_MODE env var):
+      "nvidia" -> NVIDIA NIM API
       "api"   -> Gemini only
       "local" -> Ollama only
-      "auto"  -> Try Gemini first, fallback to Ollama (default)
+      "auto"  -> Try NVIDIA first, fallback to others
 
     If everything fails, returns a safe CLEAR result (never crashes).
 
@@ -298,6 +315,16 @@ def analyze_image(image_path: str) -> dict:
     print(f"\n[ANALYZE] {Path(path).name}")
 
     mode = VLM_MODE.lower()
+
+    # --- NVIDIA mode ---
+    if mode == "nvidia":
+        try:
+            result = analyze_image_nvidia(path)
+            print(f"  [OK] NVIDIA: {result['type']} / {result['severity']}")
+            return result
+        except Exception as e:
+            print(f"  [X] NVIDIA failed: {e}")
+            return _fallback_clear(str(e))
 
     # --- API-only mode ---
     if mode == "api":
@@ -319,7 +346,14 @@ def analyze_image(image_path: str) -> dict:
             print(f"  [X] Ollama failed: {e}")
             return _fallback_clear(str(e))
 
-    # --- Auto mode (default): try API first, then local ---
+    # --- Auto mode (default): try NVIDIA first, then others ---
+    try:
+        result = analyze_image_nvidia(path)
+        print(f"  [OK] NVIDIA: {result['type']} / {result['severity']}")
+        return result
+    except Exception as e:
+        print(f"  [X] NVIDIA failed: {e}")
+
     try:
         result = analyze_image_gemini(path)
         print(f"  [OK] Gemini: {result['type']} / {result['severity']}")
@@ -360,8 +394,8 @@ _TYPE_RANK = {"CLEAR": 0, "CONGESTION": 1, "BLOCKED": 2, "FLOOD": 3, "ACCIDENT":
 VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"}
 
 
-def analyze_video(video_path: str, frame_interval_sec: float = 3.0,
-                  max_frames: int = 10) -> list:
+def analyze_video(video_path: str, frame_interval_sec: float = 5.0,
+                  max_frames: int = 5) -> list:
     """Analyze a video by extracting frames at regular intervals.
 
     Args:

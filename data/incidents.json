@@ -58,5 +58,137 @@
     "accessible": true,
     "image": "clear_road.jpg",
     "timestamp": "2024-01-15T09:15:00"
+  },
+  {
+    "type": "ACCIDENT",
+    "severity": "HIGH",
+    "confidence": 95,
+    "description": "<1 sentence>",
+    "emergency": true,
+    "accessible": true,
+    "lat": 13.034149,
+    "lng": 77.530344,
+    "id": 6
+  },
+  {
+    "type": "ACCIDENT",
+    "severity": "HIGH",
+    "confidence": 95,
+    "description": "<1 sentence>",
+    "emergency": true,
+    "accessible": true,
+    "lat": 13.034149,
+    "lng": 77.530344,
+    "id": 7
+  },
+  {
+    "type": "ACCIDENT",
+    "severity": "HIGH",
+    "confidence": 95,
+    "description": "<1 sentence>",
+    "emergency": true,
+    "accessible": true,
+    "lat": 13.034149,
+    "lng": 77.530344,
+    "id": 8
+  },
+  {
+    "type": "ACCIDENT",
+    "severity": "HIGH",
+    "confidence": 95,
+    "description": "<1 sentence>",
+    "emergency": true,
+    "accessible": true,
+    "lat": 13.034149,
+    "lng": 77.530344,
+    "id": 9
+  },
+  {
+    "type": "ACCIDENT",
+    "severity": "HIGH",
+    "confidence": 95,
+    "description": "<1 sentence>",
+    "emergency": true,
+    "accessible": true,
+    "lat": 12.9756,
+    "lng": 77.5993,
+    "id": 10
+  },
+  {
+    "type": "ACCIDENT",
+    "severity": "HIGH",
+    "confidence": 95,
+    "description": "<1 sentence>",
+    "emergency": true,
+    "accessible": true,
+    "lat": 12.9756,
+    "lng": 77.5993,
+    "id": 11
+  },
+  {
+    "type": "ACCIDENT",
+    "severity": "HIGH",
+    "confidence": 95,
+    "description": "<1 sentence>",
+    "emergency": true,
+    "accessible": true,
+    "lat": 12.9756,
+    "lng": 77.5993,
+    "id": 12
+  },
+  {
+    "type": "ACCIDENT",
+    "severity": "HIGH",
+    "confidence": 95,
+    "description": "<1 sentence>",
+    "emergency": true,
+    "accessible": true,
+    "lat": 12.9756,
+    "lng": 77.5993,
+    "id": 13
+  },
+  {
+    "type": "ACCIDENT",
+    "severity": "HIGH",
+    "confidence": 95,
+    "description": "<1 sentence>",
+    "emergency": true,
+    "accessible": true,
+    "lat": 12.9756,
+    "lng": 77.5993,
+    "id": 14
+  },
+  {
+    "type": "ACCIDENT",
+    "severity": "HIGH",
+    "confidence": 95,
+    "description": "A red car has crashed into a bus, causing significant damage and debris on the road.",
+    "emergency": true,
+    "accessible": false,
+    "lat": 12.9756,
+    "lng": 77.5993,
+    "id": 15
+  },
+  {
+    "type": "BLOCKED",
+    "severity": "MEDIUM",
+    "confidence": 75,
+    "description": "Road closed due to construction",
+    "emergency": false,
+    "accessible": false,
+    "lat": 12.9756,
+    "lng": 77.5993,
+    "id": 16
+  },
+  {
+    "type": "CONGESTION",
+    "severity": "MEDIUM",
+    "confidence": 70,
+    "description": "Heavy traffic on the road",
+    "emergency": false,
+    "accessible": true,
+    "lat": 12.9756,
+    "lng": 77.5993,
+    "id": 17
   }
 ]

@@ -46,10 +46,10 @@ _ROUTE_LABELS = ["Route A", "Route B", "Route C", "Route D", "Route E"]
 
 _PENALTY_TABLE: dict[str, dict[str, int]] = {
     # incident_type → {severity → penalty}
-    "ACCIDENT":   {"HIGH": -40, "MEDIUM": -25, "LOW": -10},
-    "FLOOD":      {"HIGH": -50, "MEDIUM": -30, "LOW": -15},
-    "BLOCKED":    {"HIGH": -60, "MEDIUM": -35, "LOW": -15},
-    "CONGESTION": {"HIGH": -30, "MEDIUM": -15, "LOW": -5},
+    "ACCIDENT":   {"HIGH": -80, "MEDIUM": -50, "LOW": -20},
+    "FLOOD":      {"HIGH": -100, "MEDIUM": -60, "LOW": -30},
+    "BLOCKED":    {"HIGH": -120, "MEDIUM": -70, "LOW": -30},
+    "CONGESTION": {"HIGH": -60, "MEDIUM": -30, "LOW": -10},
 }
 
 _ACCESSIBILITY_PENALTY: int = -60   # inaccessible incident on route
@@ -118,7 +118,7 @@ def _nearby_incidents(
 def get_osrm_routes(
     start: list[float],
     end: list[float],
-    num_alternatives: int = 2,
+    num_alternatives: int = 5,
 ) -> list[dict]:
     """Fetch real candidate routes from the OSRM public API.
 

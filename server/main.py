@@ -21,7 +21,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from ai.vlm import analyze_image  # noqa: E402
+from ai.vlm import analyze_image, analyze_video, get_worst_incident, is_video_file  # noqa: E402
 from ai.routing_agent import plan_route  # noqa: E402
 from server.alerts import generate_emergency_alert, generate_bbmp_complaint  # noqa: E402
 
@@ -52,6 +52,32 @@ app.add_middleware(
 
 # Serve images statically so frontend can reference them
 app.mount("/images", StaticFiles(directory=IMAGES_DIR), name="images")
+
+
+# ---------------------------------------------------------------------------
+# Startup: pre-warm both models so VRAM is loaded before first request
+# ---------------------------------------------------------------------------
+
+@app.on_event("startup")
+async def warmup_models():
+    """Pre-load VLM into VRAM. Routing model loads on first use (text-only, fast)."""
+    import threading
+    import requests as req
+    from ai.vlm import OLLAMA_URL, OLLAMA_MODEL as VLM_MODEL
+
+    def _warm():
+        try:
+            print(f"[WARMUP] Loading {VLM_MODEL} into VRAM...")
+            req.post(
+                f"{OLLAMA_URL}/api/chat",
+                json={"model": VLM_MODEL, "messages": [{"role": "user", "content": "hi"}], "stream": False, "keep_alive": -1},
+                timeout=120,
+            )
+            print(f"[WARMUP] {VLM_MODEL} ready ✓")
+        except Exception as e:
+            print(f"[WARMUP] Could not warm {VLM_MODEL}: {e}")
+
+    threading.Thread(target=_warm, daemon=True).start()
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +172,11 @@ async def analyze_upload_endpoint(file: UploadFile = File(...)):
         with open(temp_path, "wb") as fh:
             fh.write(contents)
 
-        result = analyze_image(temp_path)
+        if is_video_file(temp_path):
+            frames = analyze_video(temp_path)
+            result = get_worst_incident(frames)
+        else:
+            result = analyze_image(temp_path)
         return result
     finally:
         # Clean up temp file
@@ -180,6 +210,19 @@ async def pins_endpoint():
     """
     incidents = _load_incidents()
     return incidents
+
+
+@app.post("/pins")
+async def add_pin_endpoint(incident: dict):
+    """
+    Add a new incident pin.
+    """
+    incidents = _load_incidents()
+    # Add an ID
+    incident["id"] = max([p.get("id", 0) for p in incidents] + [0]) + 1
+    incidents.append(incident)
+    _save_incidents(incidents)
+    return {"status": "ok", "pin": incident}
 
 
 # ---- POST /alert ----------------------------------------------------------

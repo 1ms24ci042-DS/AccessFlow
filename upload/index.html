@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="AccessFlow smart-city accessibility dashboard for Bengaluru emergency routing and AI incident monitoring."
+    />
+    <title>AccessFlow | Bengaluru Accessibility Command</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="preconnect" href="https://tile.openstreetmap.org" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQppQ8hbbLrwE8LhHlHo9gHfVjgW9M="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <div>
+            <p class="eyebrow">Bengaluru Smart Mobility Grid</p>
+            <h1>AccessFlow</h1>
+          </div>
+        </div>
+        <div class="system-strip" aria-label="System status">
+          <span><strong>AI Net</strong> Online</span>
+          <span><strong>Traffic</strong> Live</span>
+          <span><strong>Response</strong> 02:18</span>
+        </div>
+      </header>
+
+      <section class="ops-metrics" aria-label="Operational metrics">
+        <article>
+          <span>Active Incidents</span>
+          <strong>05</strong>
+          <small>2 critical</small>
+        </article>
+        <article>
+          <span>Accessible Corridors</span>
+          <strong>81%</strong>
+          <small>+6% last hour</small>
+        </article>
+        <article>
+          <span>Emergency Units</span>
+          <strong>12</strong>
+          <small>4 near CBD</small>
+        </article>
+        <article>
+          <span>Network Confidence</span>
+          <strong>94%</strong>
+          <small>stable</small>
+        </article>
+      </section>
+
+      <main class="dashboard">
+        <aside class="panel left-panel" aria-label="AI surveillance and incident panel">
+          <section class="panel-section camera-module">
+            <div class="section-heading">
+              <span>AI Surveillance</span>
+              <span class="live-pill">Live</span>
+            </div>
+            <div class="camera-feed">
+              <div class="scan-line"></div>
+              <div class="camera-grid"></div>
+              <div class="camera-frame">
+                <span class="camera-dot danger"></span>
+                <span class="camera-dot warning"></span>
+                <span class="camera-dot safe"></span>
+              </div>
+              <div class="feed-overlay">
+                <span>CAM BLR-CBD-07</span>
+                <strong>MG Road Junction</strong>
+              </div>
+            </div>
+            <div class="surveillance-meta">
+              <span>Frame AI 48 fps</span>
+              <span>Vision model warm</span>
+              <span>4 zones tracked</span>
+            </div>
+          </section>
+
+          <section class="panel-section ai-card">
+            <div class="section-heading">
+              <span>AI Analysis</span>
+              <span class="severity-badge">High Severity</span>
+            </div>
+            <div class="alert-banner">Emergency obstruction detected near a pedestrian ramp.</div>
+
+            <div class="metric-row">
+              <span>Confidence Score</span>
+              <strong>94%</strong>
+            </div>
+            <div class="confidence-track" aria-hidden="true">
+              <span style="width: 94%"></span>
+            </div>
+
+            <div class="status-grid">
+              <div>
+                <small>Accessibility</small>
+                <strong class="status-danger">Compromised</strong>
+              </div>
+              <div>
+                <small>Assistive Access</small>
+                <strong>Reroute advised</strong>
+              </div>
+            </div>
+
+            <p class="incident-copy">
+              Flooding and roadwork barriers are narrowing curb access. Wheelchair-safe route confidence
+              drops below acceptable threshold for the next 1.6 km.
+            </p>
+
+            <div class="action-stack">
+              <button class="btn btn-emergency" type="button">Emergency 108</button>
+              <button class="btn btn-civic" type="button">Report to BBMP</button>
+            </div>
+          </section>
+
+          <section class="panel-section incident-queue">
+            <div class="section-heading">
+              <span>Incident Queue</span>
+              <span>Priority</span>
+            </div>
+            <article>
+              <i class="queue-dot red"></i>
+              <div>
+                <strong>MG Road ramp obstruction</strong>
+                <span>Critical - 0.8 km</span>
+              </div>
+              <b>108</b>
+            </article>
+            <article>
+              <i class="queue-dot blue"></i>
+              <div>
+                <strong>Ulsoor waterlogging</strong>
+                <span>High - 1.7 km</span>
+              </div>
+              <b>BBMP</b>
+            </article>
+            <article>
+              <i class="queue-dot orange"></i>
+              <div>
+                <strong>Koramangala barricade</strong>
+                <span>Medium - 4.1 km</span>
+              </div>
+              <b>OPS</b>
+            </article>
+          </section>
+        </aside>
+
+        <section class="map-panel" aria-label="Live Bengaluru smart map">
+          <div class="map-toolbar">
+            <div>
+              <p class="eyebrow">Live Smart Map</p>
+              <h2>Bengaluru Accessibility Layer</h2>
+            </div>
+            <div class="map-legend" aria-label="Map incident legend">
+              <span><i class="legend-dot red"></i>Accident</span>
+              <span><i class="legend-dot blue"></i>Flood</span>
+              <span><i class="legend-dot orange"></i>Blocked</span>
+              <span><i class="legend-dot yellow"></i>Congestion</span>
+              <span><i class="legend-dot green"></i>Clear</span>
+            </div>
+            <div class="map-layer-switch" aria-label="Map style">
+              <button type="button" data-map-style="streets" aria-pressed="true">Street</button>
+              <button type="button" data-map-style="dark" aria-pressed="false">Dark</button>
+              <button type="button" data-map-style="tactical" aria-pressed="false">Tactical</button>
+            </div>
+          </div>
+          <div id="map" role="application" aria-label="Leaflet map centered on Bengaluru"></div>
+          <div class="map-status-card">
+            <span>GPS</span>
+            <strong id="gpsStatus">Waiting for secure location access</strong>
+          </div>
+          <div class="map-kpi-dock" aria-label="Map analytics">
+            <article><span>Flow</span><strong>72%</strong></article>
+            <article><span>Hazard</span><strong>High</strong></article>
+            <article><span>Safe ETA</span><strong>34m</strong></article>
+          </div>
+        </section>
+
+        <aside class="panel right-panel" aria-label="Routing and analytics panel">
+          <section class="panel-section route-planner">
+            <div class="section-heading">
+              <span>Routing</span>
+              <span class="mode-pill">Accessible</span>
+            </div>
+
+            <label for="sourceInput">Source</label>
+            <input id="sourceInput" type="text" placeholder="Whitefield" autocomplete="off" />
+
+            <label for="destinationInput">Destination</label>
+            <input id="destinationInput" type="text" placeholder="MG Road" autocomplete="off" />
+
+            <div class="toggle-row">
+              <span>Accessibility Mode</span>
+              <label class="switch" aria-label="Accessibility mode enabled">
+                <input id="accessToggle" type="checkbox" checked />
+                <span></span>
+              </label>
+            </div>
+
+            <div class="route-options" aria-label="Routing preferences">
+              <span>Wheelchair</span>
+              <span>Low flood</span>
+              <span>Emergency lane</span>
+            </div>
+
+            <button id="routeButton" class="btn btn-route" type="button">Search Route</button>
+            <p id="routeMessage" class="route-message">Try Whitefield, Koramangala, MG Road, or Electronic City.</p>
+          </section>
+
+          <section class="panel-section analytics">
+            <div class="section-heading">
+              <span>Route Confidence</span>
+              <span>Mock Data</span>
+            </div>
+            <div class="confidence-cards">
+              <article class="mini-card danger-card">
+                <small>Shortest Route</small>
+                <strong>61%</strong>
+                <span>Fast but risk-heavy</span>
+              </article>
+              <article class="mini-card safe-card">
+                <small>AI Recommended</small>
+                <strong>92%</strong>
+                <span>Accessible priority</span>
+              </article>
+            </div>
+
+            <article class="route-card shortest">
+              <div>
+                <span class="route-line red-line"></span>
+                <strong>Shortest Route</strong>
+              </div>
+              <dl>
+                <div><dt>ETA</dt><dd>28 min</dd></div>
+                <div><dt>Distance</dt><dd>11.4 km</dd></div>
+                <div><dt>Access Score</dt><dd>58/100</dd></div>
+              </dl>
+            </article>
+
+            <article class="route-card recommended">
+              <div>
+                <span class="route-line green-line"></span>
+                <strong>AI Recommended Route</strong>
+              </div>
+              <dl>
+                <div><dt>ETA</dt><dd>34 min</dd></div>
+                <div><dt>Distance</dt><dd>13.2 km</dd></div>
+                <div><dt>Access Score</dt><dd>91/100</dd></div>
+              </dl>
+            </article>
+
+            <div class="explanation-panel">
+              <span>AI Explanation</span>
+              <p>
+                Recommended route avoids the flooded curb lane near Ulsoor, skips high-congestion sections,
+                and favors wider pedestrian crossings with better emergency access.
+              </p>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="map.js"></script>
+  </body>
+</html>
