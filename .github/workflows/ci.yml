@@ -1,0 +1,36 @@
+name: AccessFlow CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Check for Requirements
+      run: |
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        
+    - name: Check for Package.json
+      run: |
+        if [ -f package.json ]; then npm ci; fi
+        
+    - name: Basic Syntax Check (Python)
+      run: |
+        python -m compileall .
